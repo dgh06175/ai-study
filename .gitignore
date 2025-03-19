@@ -1,5 +1,19 @@
-# Created by https://www.toptal.com/developers/gitignore/api/macos,python,pycharm
-# Edit at https://www.toptal.com/developers/gitignore?templates=macos,python,pycharm
+# Created by https://www.toptal.com/developers/gitignore/api/jupyternotebooks,pycharm,python,macos
+# Edit at https://www.toptal.com/developers/gitignore?templates=jupyternotebooks,pycharm,python,macos
+
+### JupyterNotebooks ###
+# gitignore template for Jupyter Notebooks
+# website: http://jupyter.org/
+
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
+
+# IPython
+profile_default/
+ipython_config.py
+
+# Remove previous ipynb_checkpoints
+#   git rm -r .ipynb_checkpoints/
 
 ### macOS ###
 # General
@@ -227,11 +241,8 @@ docs/_build/
 target/
 
 # Jupyter Notebook
-.ipynb_checkpoints
 
 # IPython
-profile_default/
-ipython_config.py
 
 # pyenv
 #   For a library or package, you might want to ignore these files since the code is
@@ -320,4 +331,4 @@ poetry.toml
 # LSP config files
 pyrightconfig.json
 
-# End of https://www.toptal.com/developers/gitignore/api/macos,python,pycharm
+# End of https://www.toptal.com/developers/gitignore/api/jupyternotebooks,pycharm,python,macos

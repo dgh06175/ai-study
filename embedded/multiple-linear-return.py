@@ -9,6 +9,8 @@ y = 4 + 3 * x1 + 2 * x2 + np.random.normal(0, 1, (100, 1))
 
 model = LinearRegression()
 x = np.hstack((x1, x2))
+print(x.shape, y.shape)
+
 model.fit(x, y)
 
 print("회귀 개수 (기울기): ", model.coef_)

@@ -1,4 +1,5 @@
 *.png
+*.jpg
 
 # Created by https://www.toptal.com/developers/gitignore/api/jupyternotebooks,pycharm,python,macos
 # Edit at https://www.toptal.com/developers/gitignore?templates=jupyternotebooks,pycharm,python,macos

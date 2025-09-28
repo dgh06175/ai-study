@@ -1,0 +1,6 @@
+# SSE Practice Project Dependencies
+fastapi
+uvicorn
+requests
+sqlite3
+pydantic

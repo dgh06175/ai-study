@@ -1,0 +1,4 @@
+# SSE Practice Project - Frontend Requirements
+requests>=2.31.0
+flask>=2.3.0
+# tkinter는 Python 표준 라이브러리에 포함되어 있어 별도 설치 불필요

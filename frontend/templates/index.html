@@ -1,0 +1,113 @@
+{% extends "base.html" %} {% block title %}대화방 목록 - SSE 채팅 클라이언트{%
+endblock %} {% block content %}
+<div class="row">
+  <div class="col-md-8 mx-auto">
+    <div class="card">
+      <div class="card-header">
+        <h4><i class="fas fa-home"></i> 대화방 관리</h4>
+      </div>
+      <div class="card-body">
+        <!-- 새 대화방 생성 -->
+        <form method="POST" action="{{ url_for('create_room') }}" class="mb-4">
+          <div class="row">
+            <div class="col-md-8">
+              <input
+                type="text"
+                name="room_name"
+                class="form-control"
+                placeholder="새 대화방 이름 (비워두면 자동 생성)"
+              />
+            </div>
+            <div class="col-md-4">
+              <button type="submit" class="btn btn-primary w-100">
+                <i class="fas fa-plus"></i> 대화방 생성
+              </button>
+            </div>
+          </div>
+        </form>
+
+        <!-- 대화방 목록 -->
+        <h5><i class="fas fa-list"></i> 대화방 목록</h5>
+        {% if rooms %}
+        <div class="table-responsive">
+          <table class="table table-hover">
+            <thead>
+              <tr>
+                <th>대화방 이름</th>
+                <th>ID</th>
+                <th>생성일</th>
+                <th>작업</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for room in rooms %}
+              <tr>
+                <td><strong>{{ room.name }}</strong></td>
+                <td><code>{{ room.id }}</code></td>
+                <td>{{ room.created_at }}</td>
+                <td>
+                  <a
+                    href="{{ url_for('chat_room', room_id=room.id) }}"
+                    class="btn btn-success btn-sm"
+                  >
+                    <i class="fas fa-comments"></i> 채팅
+                  </a>
+                  <form
+                    method="POST"
+                    action="{{ url_for('delete_room', room_id=room.id) }}"
+                    class="d-inline"
+                    onsubmit="return confirm('정말 삭제하시겠습니까?')"
+                  >
+                    <button type="submit" class="btn btn-danger btn-sm">
+                      <i class="fas fa-trash"></i> 삭제
+                    </button>
+                  </form>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="alert alert-info">
+          <i class="fas fa-info-circle"></i>
+          아직 생성된 대화방이 없습니다. 새 대화방을 만들어보세요!
+        </div>
+        {% endif %}
+
+        <!-- 새로고침 버튼 -->
+        <div class="text-center mt-3">
+          <button onclick="location.reload()" class="btn btn-outline-secondary">
+            <i class="fas fa-sync-alt"></i> 새로고침
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 사용 방법 -->
+    <div class="card mt-4">
+      <div class="card-header">
+        <h5><i class="fas fa-question-circle"></i> 사용 방법</h5>
+      </div>
+      <div class="card-body">
+        <ol>
+          <li>
+            <strong>대화방 생성</strong>: 위의 입력창에 이름을 입력하고 "대화방
+            생성" 버튼을 클릭
+          </li>
+          <li>
+            <strong>채팅 시작</strong>: 대화방 목록에서 "채팅" 버튼을 클릭
+          </li>
+          <li>
+            <strong>실시간 채팅</strong>: 메시지를 입력하면 AI가 실시간으로
+            응답을 스트리밍
+          </li>
+          <li>
+            <strong>대화방 삭제</strong>: 불필요한 대화방은 "삭제" 버튼으로 제거
+          </li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,289 @@
+{% extends "base.html" %} {% block title %}{{ room.name if room else '채팅방' }}
+- SSE 채팅 클라이언트{% endblock %} {% block content %}
+<div class="row">
+  <div class="col-md-10 mx-auto">
+    {% if room %}
+    <div class="card">
+      <div
+        class="card-header d-flex justify-content-between align-items-center"
+      >
+        <h4><i class="fas fa-comments"></i> {{ room.name }}</h4>
+        <div>
+          <small class="text-muted">ID: {{ room.id }}</small>
+          <a
+            href="{{ url_for('index') }}"
+            class="btn btn-outline-secondary btn-sm ms-2"
+          >
+            <i class="fas fa-arrow-left"></i> 대화방 목록
+          </a>
+        </div>
+      </div>
+      <div class="card-body p-0">
+        <!-- 채팅 영역 -->
+        <div id="chat-container" class="chat-container">
+          <div id="chat-messages" class="chat-messages">
+            <div class="welcome-message">
+              <i class="fas fa-robot"></i>
+              <strong>{{ room.name }}</strong>에 오신 것을 환영합니다!<br />
+              메시지를 입력하면 AI가 실시간으로 응답합니다.
+            </div>
+          </div>
+        </div>
+
+        <!-- 입력 영역 -->
+        <div class="chat-input-container">
+          <form id="message-form" class="d-flex">
+            <input
+              type="text"
+              id="message-input"
+              class="form-control"
+              placeholder="메시지를 입력하세요..."
+              autocomplete="off"
+              required
+            />
+            <button type="submit" id="send-button" class="btn btn-primary ms-2">
+              <i class="fas fa-paper-plane"></i> 전송
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- 연결 상태 -->
+    <div class="mt-3">
+      <div id="connection-status" class="alert alert-info">
+        <i class="fas fa-plug"></i> 백엔드 서버에 연결 중...
+      </div>
+    </div>
+    {% else %}
+    <div class="alert alert-danger">
+      <i class="fas fa-exclamation-triangle"></i>
+      대화방을 찾을 수 없습니다.
+      <a href="{{ url_for('index') }}">대화방 목록</a>으로 돌아가세요.
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %} {% block scripts %} {% if room %}
+<script>
+  const roomId = "{{ room.id }}";
+  let isStreaming = false;
+  let currentEventSource = null;
+
+  // DOM 요소들
+  const messageForm = document.getElementById("message-form");
+  const messageInput = document.getElementById("message-input");
+  const sendButton = document.getElementById("send-button");
+  const chatMessages = document.getElementById("chat-messages");
+  const connectionStatus = document.getElementById("connection-status");
+
+  // 연결 상태 업데이트
+  function updateConnectionStatus(status, message) {
+    const statusElement = connectionStatus;
+    statusElement.className =
+      "alert " +
+      (status === "connected"
+        ? "alert-success"
+        : status === "error"
+        ? "alert-danger"
+        : "alert-info");
+    statusElement.innerHTML = `<i class="fas fa-${
+      status === "connected"
+        ? "check-circle"
+        : status === "error"
+        ? "exclamation-triangle"
+        : "clock"
+    }"></i> ${message}`;
+  }
+
+  // 메시지를 채팅창에 추가
+  function addMessage(content, type = "user") {
+    const messageDiv = document.createElement("div");
+    messageDiv.className = `message ${type}-message`;
+
+    if (type === "user") {
+      messageDiv.innerHTML = `
+            <div class="message-content">
+                <i class="fas fa-user"></i> <strong>사용자:</strong> ${content}
+            </div>
+        `;
+    } else if (type === "ai-start") {
+      messageDiv.innerHTML = `
+            <div class="message-content">
+                <i class="fas fa-robot"></i> <strong>AI:</strong> <span id="ai-response"></span><span class="typing-cursor">|</span>
+            </div>
+        `;
+    }
+
+    chatMessages.appendChild(messageDiv);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+    return messageDiv;
+  }
+
+  // AI 응답 토큰 추가
+  function appendToken(token) {
+    const aiResponse = document.getElementById("ai-response");
+    if (aiResponse) {
+      aiResponse.textContent += token + " ";
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+  }
+
+  // 스트리밍 완료 처리
+  function finishStreaming(message) {
+    const cursor = document.querySelector(".typing-cursor");
+    if (cursor) {
+      cursor.remove();
+    }
+
+    if (message) {
+      const finishedDiv = document.createElement("div");
+      finishedDiv.className = "message-finished";
+      finishedDiv.innerHTML = `<i class="fas fa-check-circle"></i> ${message}`;
+      chatMessages.appendChild(finishedDiv);
+    }
+
+    isStreaming = false;
+    sendButton.disabled = false;
+    sendButton.innerHTML = '<i class="fas fa-paper-plane"></i> 전송';
+    messageInput.disabled = false;
+    messageInput.focus();
+
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }
+
+  // SSE 연결로 메시지 전송
+  function sendMessage(message) {
+    if (isStreaming) {
+      alert("이전 메시지의 응답을 기다리고 있습니다.");
+      return;
+    }
+
+    // 사용자 메시지 표시
+    addMessage(message, "user");
+
+    // AI 응답 영역 생성
+    addMessage("", "ai-start");
+
+    // UI 상태 변경
+    isStreaming = true;
+    sendButton.disabled = true;
+    sendButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 전송 중...';
+    messageInput.disabled = true;
+
+    // SSE 연결 생성
+    const eventSource = new EventSource(
+      `http://localhost:8000/rooms/${roomId}/chat`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ message: message }),
+      }
+    );
+
+    // 실제로는 POST 요청을 먼저 보내고 SSE로 응답을 받아야 함
+    fetch(`http://localhost:8000/rooms/${roomId}/chat`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "text/event-stream",
+      },
+      body: JSON.stringify({ message: message }),
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+
+        function readStream() {
+          return reader.read().then(({ done, value }) => {
+            if (done) {
+              finishStreaming("응답이 완료되었습니다.");
+              updateConnectionStatus("connected", "백엔드 서버에 연결됨");
+              return;
+            }
+
+            const chunk = decoder.decode(value);
+            const lines = chunk.split("\n");
+
+            for (const line of lines) {
+              if (line.startsWith("data: ")) {
+                try {
+                  const eventData = JSON.parse(line.slice(6));
+
+                  if (eventData.token) {
+                    appendToken(eventData.token);
+                  }
+
+                  if (eventData.finished) {
+                    finishStreaming(
+                      eventData.message || "응답이 완료되었습니다."
+                    );
+                    updateConnectionStatus("connected", "백엔드 서버에 연결됨");
+                    return;
+                  }
+                } catch (e) {
+                  console.warn("JSON 파싱 오류:", e, line);
+                }
+              }
+            }
+
+            return readStream();
+          });
+        }
+
+        updateConnectionStatus("connected", "응답을 받는 중...");
+        return readStream();
+      })
+      .catch((error) => {
+        console.error("SSE 오류:", error);
+        finishStreaming();
+        updateConnectionStatus("error", `연결 오류: ${error.message}`);
+
+        // 오류 메시지 표시
+        const errorDiv = document.createElement("div");
+        errorDiv.className = "message error-message";
+        errorDiv.innerHTML = `
+            <div class="message-content">
+                <i class="fas fa-exclamation-triangle"></i> 
+                <strong>오류:</strong> ${error.message}
+            </div>
+        `;
+        chatMessages.appendChild(errorDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      });
+  }
+
+  // 폼 제출 이벤트
+  messageForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const message = messageInput.value.trim();
+    if (message) {
+      sendMessage(message);
+      messageInput.value = "";
+    }
+  });
+
+  // 페이지 로드 시 연결 상태 확인
+  window.addEventListener("load", () => {
+    fetch("http://localhost:8000/health")
+      .then((response) => {
+        if (response.ok) {
+          updateConnectionStatus("connected", "백엔드 서버에 연결됨");
+        } else {
+          throw new Error("서버 응답 오류");
+        }
+      })
+      .catch((error) => {
+        updateConnectionStatus("error", "백엔드 서버 연결 실패");
+      });
+
+    messageInput.focus();
+  });
+</script>
+{% endif %} {% endblock %}
